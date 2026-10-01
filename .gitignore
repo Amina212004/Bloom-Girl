@@ -1,0 +1,79 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VS Code (garder les settings utiles, ignorer les secrets)
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# =============================================
+# SECRETS & DONNÉES SENSIBLES — NE PAS PUSH !
+# =============================================
+
+# Variables d'environnement (clés API, mots de passe DB)
+.env
+backend/.env
+*.env
+
+# Base de données locale SQLite
+backend/bloomrose.db
+*.db
+*.sqlite
+
+# Cache Python
+backend/__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Node.js (Vite/package.json présent dans le projet)
+node_modules/
+package-lock.json
+
+# Logs Flutter
+flutter_*.log
+
+# Fichiers images temporaires à la racine (pas des assets)
+butterfly.jpg
+fleure.jpg
+imagelogo.jpg
+screen.png
+
+# Fichiers de build Gradle
+android/.gradle/
+android/app/build/
+

@@ -1,0 +1,102 @@
+# ==============================
+# Dépendances
+# ==============================
+node_modules/
+.pnp
+.pnp.js
+.yarn/
+.npm/
+bower_components/
+
+# ==============================
+# Variables d'environnement (secrets)
+# ==============================
+.env
+.env.*
+!.env.example
+
+# ==============================
+# Fichiers générés / build
+# ==============================
+dist/
+build/
+out/
+.next/
+.nuxt/
+.cache/
+.parcel-cache/
+.turbo/
+coverage/
+*.tsbuildinfo
+
+# ==============================
+# Logs
+# ==============================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ==============================
+# Backend : fichiers locaux
+# ==============================
+uploads/
+*.sqlite
+*.sqlite3
+*.db
+
+# ==============================
+# Mobile : Expo / React Native
+# ==============================
+.expo/
+.expo-shared/
+web-build/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Android
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+android/app/release/
+*.apk
+*.aab
+
+# iOS
+ios/Pods/
+ios/build/
+*.xcworkspace/xcuserdata/
+*.xcuserstate
+DerivedData/
+
+# Metro
+.metro-health-check*
+
+# ==============================
+# Éditeurs et IDE
+# ==============================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ==============================
+# Système
+# ==============================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ==============================
+# Divers
+# ==============================
+*.tmp
+*.temp
+*.pid

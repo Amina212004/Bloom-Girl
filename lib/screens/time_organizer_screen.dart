@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/user_service.dart';
+import '../services/api_service.dart';
 
 class TimeOrganizerScreen extends StatefulWidget {
   const TimeOrganizerScreen({Key? key}) : super(key: key);
@@ -49,10 +50,13 @@ class _TimeOrganizerScreenState extends State<TimeOrganizerScreen>
   static const Color _roseLight = Color(0xFFFFF0F4);
   static const Color _roseDeep = Color(0xFF7A2B49);
 
+  final BackendAPIService _apiService = BackendAPIService();
+
   @override
   void initState() {
     super.initState();
     _initDefaultTasks();
+    _loadTasksFromBackend();
     _initAnimations();
   }
 
@@ -177,6 +181,37 @@ class _TimeOrganizerScreenState extends State<TimeOrganizerScreen>
     ];
   }
 
+  Future<void> _loadTasksFromBackend() async {
+    final userId = _userService.profile.id;
+    final backendTasks = await _apiService.getTasks(userId: userId);
+    if (backendTasks.isNotEmpty) {
+      final todayKey = _dateKey(DateTime.now());
+      final Map<String, List<Map<String, dynamic>>> fetchedByDate = {};
+      for (final t in backendTasks) {
+        final dateStr = t['created_at'] != null
+            ? t['created_at'].toString().split('T').first
+            : todayKey;
+        if (!fetchedByDate.containsKey(dateStr)) {
+          fetchedByDate[dateStr] = [];
+        }
+        fetchedByDate[dateStr]!.add({
+          'id': t['id'],
+          'text': t['text'],
+          'category': t['category'] ?? 'Perso',
+          'icon': Icons.task_alt_rounded,
+          'completed': t['completed'] ?? false,
+        });
+      }
+      if (mounted) {
+        setState(() {
+          fetchedByDate.forEach((key, list) {
+            _tasksByDate[key] = list;
+          });
+        });
+      }
+    }
+  }
+
   String _dateKey(DateTime date) {
     return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
   }
@@ -189,6 +224,7 @@ class _TimeOrganizerScreenState extends State<TimeOrganizerScreen>
   }
 
   void _toggleTask(int id) {
+    _apiService.toggleTask(id);
     setState(() {
       final key = _dateKey(_selectedDate);
       final list = _tasksByDate[key];
@@ -204,6 +240,7 @@ class _TimeOrganizerScreenState extends State<TimeOrganizerScreen>
   }
 
   void _deleteTask(int id) {
+    _apiService.deleteTask(id);
     setState(() {
       final key = _dateKey(_selectedDate);
       _tasksByDate[key]?.removeWhere((t) => t['id'] == id);
@@ -430,16 +467,27 @@ class _TimeOrganizerScreenState extends State<TimeOrganizerScreen>
                         width: double.infinity,
                         height: 48,
                         child: ElevatedButton.icon(
-                          onPressed: () {
+                          onPressed: () async {
                             final text = textController.text.trim();
                             if (text.isNotEmpty) {
                               final key = _dateKey(dateToUse);
                               if (!_tasksByDate.containsKey(key)) {
                                 _tasksByDate[key] = [];
                               }
+
+                              final userId = _userService.profile.id;
+                              final created = await _apiService.addTask(
+                                text,
+                                selectedCategory,
+                                userId: userId,
+                              );
+                              final taskId = created != null && created['id'] != null
+                                  ? created['id']
+                                  : DateTime.now().millisecondsSinceEpoch;
+
                               setState(() {
                                 _tasksByDate[key]!.add({
-                                  'id': DateTime.now().millisecondsSinceEpoch,
+                                  'id': taskId,
                                   'text': text,
                                   'category': selectedCategory,
                                   'icon': selectedIcon,
@@ -448,6 +496,7 @@ class _TimeOrganizerScreenState extends State<TimeOrganizerScreen>
                                 _selectedDate = dateToUse;
                               });
                               Navigator.pop(ctx);
+                              if (!mounted) return;
 
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(

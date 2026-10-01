@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../services/user_service.dart';
+import '../services/api_service.dart';
 import '../widgets/pink_panda_mascot.dart';
 
 class CycleTrackerScreen extends StatefulWidget {
@@ -94,6 +95,19 @@ class _CycleTrackerScreenState extends State<CycleTrackerScreen>
       hasSetupCycle: true,
     );
     await _userService.updateProfile(updated);
+
+    if (profile.id != null) {
+      final activeSymptoms = _symptoms
+          .where((s) => s['active'] == true)
+          .map((s) => s['name'].toString())
+          .join(', ');
+      await BackendAPIService().postCycleLog(
+        userId: profile.id!,
+        mood: _selectedMood,
+        symptoms: activeSymptoms,
+        periodStartDate: date,
+      );
+    }
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

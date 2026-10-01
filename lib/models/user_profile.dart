@@ -1,4 +1,5 @@
 class UserProfile {
+  final int? id;
   final String name;
   final String email;
   final int age;
@@ -13,6 +14,7 @@ class UserProfile {
   final bool hasSetupCycle;
 
   UserProfile({
+    this.id,
     required this.name,
     required this.email,
     this.age = 19,
@@ -27,6 +29,7 @@ class UserProfile {
   });
 
   UserProfile copyWith({
+    int? id,
     String? name,
     String? email,
     int? age,
@@ -40,6 +43,7 @@ class UserProfile {
     bool? hasSetupCycle,
   }) {
     return UserProfile(
+      id: id ?? this.id,
       name: name ?? this.name,
       email: email ?? this.email,
       age: age ?? this.age,
@@ -56,6 +60,7 @@ class UserProfile {
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       'name': name,
       'email': email,
       'age': age,
@@ -72,6 +77,7 @@ class UserProfile {
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
+      id: json['id'],
       name: json['name'] ?? '',
       email: json['email'] ?? '',
       age: json['age'] ?? 19,

@@ -59,20 +59,24 @@ class UserService extends ChangeNotifier {
   }) async {
     final cleanEmail = email.toLowerCase().trim();
     try {
-      final backendUser = await _apiService.register(
+      final res = await _apiService.register(
         name: name,
         email: cleanEmail,
         password: password,
         age: age,
       );
 
+      final userMap = (res['user'] is Map) ? res['user'] as Map<String, dynamic> : res;
+      final userId = userMap['id'] as int?;
+
       _profile = UserProfile(
-        name: backendUser['name'] ?? name,
-        email: backendUser['email'] ?? cleanEmail,
-        age: backendUser['age'] ?? age,
-        avatar: backendUser['avatar'] ?? '🌸',
-        cycleLength: cycleLength,
-        periodDuration: periodDuration,
+        id: userId,
+        name: userMap['name'] ?? name,
+        email: userMap['email'] ?? cleanEmail,
+        age: userMap['age'] ?? age,
+        avatar: userMap['avatar'] ?? '🌸',
+        cycleLength: userMap['cycle_length'] ?? cycleLength,
+        periodDuration: userMap['period_duration'] ?? periodDuration,
         isLoggedIn: true,
       );
     } catch (e) {
@@ -97,10 +101,13 @@ class UserService extends ChangeNotifier {
   Future<void> login(String email, String password) async {
     final cleanEmail = email.toLowerCase().trim();
     try {
-      final backendUser = await _apiService.login(
+      final res = await _apiService.login(
         email: cleanEmail,
         password: password,
       );
+
+      final userMap = (res['user'] is Map) ? res['user'] as Map<String, dynamic> : res;
+      final userId = userMap['id'] as int?;
 
       // Charger le profil sauvegardé localement pour cet email spécifique s'il existe
       final prefs = await SharedPreferences.getInstance();
@@ -108,22 +115,31 @@ class UserService extends ChangeNotifier {
       if (localData != null) {
         try {
           final localJson = jsonDecode(localData);
-          _profile = UserProfile.fromJson(localJson).copyWith(isLoggedIn: true);
+          _profile = UserProfile.fromJson(localJson).copyWith(
+            id: userId ?? localJson['id'],
+            isLoggedIn: true,
+          );
         } catch (_) {
           _profile = UserProfile(
-            name: backendUser['name'] ?? cleanEmail.split('@').first,
-            email: backendUser['email'] ?? cleanEmail,
-            age: backendUser['age'] ?? 19,
-            avatar: backendUser['avatar'] ?? '🌸',
+            id: userId,
+            name: userMap['name'] ?? cleanEmail.split('@').first,
+            email: userMap['email'] ?? cleanEmail,
+            age: userMap['age'] ?? 19,
+            avatar: userMap['avatar'] ?? '🌸',
+            cycleLength: userMap['cycle_length'] ?? 28,
+            periodDuration: userMap['period_duration'] ?? 5,
             isLoggedIn: true,
           );
         }
       } else {
         _profile = UserProfile(
-          name: backendUser['name'] ?? cleanEmail.split('@').first,
-          email: backendUser['email'] ?? cleanEmail,
-          age: backendUser['age'] ?? 19,
-          avatar: backendUser['avatar'] ?? '🌸',
+          id: userId,
+          name: userMap['name'] ?? cleanEmail.split('@').first,
+          email: userMap['email'] ?? cleanEmail,
+          age: userMap['age'] ?? 19,
+          avatar: userMap['avatar'] ?? '🌸',
+          cycleLength: userMap['cycle_length'] ?? 28,
+          periodDuration: userMap['period_duration'] ?? 5,
           isLoggedIn: true,
         );
       }
@@ -137,7 +153,7 @@ class UserService extends ChangeNotifier {
     await _saveProfile();
   }
 
-  /// Connexion rapide avec Google reliée au Backend (Ne crée pas de compte automatiquement)
+  /// Connexion rapide avec Google reliée au Backend
   Future<void> loginWithGoogle({String? googleEmail, String? googleName}) async {
     final cleanEmail = (googleEmail ?? '').toLowerCase().trim();
     if (cleanEmail.isEmpty) {
@@ -145,33 +161,45 @@ class UserService extends ChangeNotifier {
     }
 
     try {
-      final backendUser = await _apiService.authGoogle(
+      final res = await _apiService.authGoogle(
         email: cleanEmail,
         name: googleName,
         avatar: '🌸',
       );
+
+      final userMap = (res['user'] is Map) ? res['user'] as Map<String, dynamic> : res;
+      final userId = userMap['id'] as int?;
 
       final prefs = await SharedPreferences.getInstance();
       final localData = prefs.getString('bloom_rose_user_profile_$cleanEmail');
       if (localData != null) {
         try {
           final localJson = jsonDecode(localData);
-          _profile = UserProfile.fromJson(localJson).copyWith(isLoggedIn: true);
+          _profile = UserProfile.fromJson(localJson).copyWith(
+            id: userId ?? localJson['id'],
+            isLoggedIn: true,
+          );
         } catch (_) {
           _profile = UserProfile(
-            name: backendUser['name'] ?? googleName ?? cleanEmail.split('@').first,
-            email: backendUser['email'] ?? cleanEmail,
-            avatar: backendUser['avatar'] ?? '🌸',
-            age: backendUser['age'] ?? 19,
+            id: userId,
+            name: userMap['name'] ?? googleName ?? cleanEmail.split('@').first,
+            email: userMap['email'] ?? cleanEmail,
+            avatar: userMap['avatar'] ?? '🌸',
+            age: userMap['age'] ?? 19,
+            cycleLength: userMap['cycle_length'] ?? 28,
+            periodDuration: userMap['period_duration'] ?? 5,
             isLoggedIn: true,
           );
         }
       } else {
         _profile = UserProfile(
-          name: backendUser['name'] ?? googleName ?? cleanEmail.split('@').first,
-          email: backendUser['email'] ?? cleanEmail,
-          avatar: backendUser['avatar'] ?? '🌸',
-          age: backendUser['age'] ?? 19,
+          id: userId,
+          name: userMap['name'] ?? googleName ?? cleanEmail.split('@').first,
+          email: userMap['email'] ?? cleanEmail,
+          avatar: userMap['avatar'] ?? '🌸',
+          age: userMap['age'] ?? 19,
+          cycleLength: userMap['cycle_length'] ?? 28,
+          periodDuration: userMap['period_duration'] ?? 5,
           isLoggedIn: true,
         );
       }
@@ -185,6 +213,17 @@ class UserService extends ChangeNotifier {
   Future<void> updateProfile(UserProfile updatedProfile) async {
     _profile = updatedProfile;
     await _saveProfile();
+
+    if (_profile.id != null) {
+      await _apiService.updateUserProfile(
+        userId: _profile.id!,
+        name: _profile.name,
+        age: _profile.age,
+        avatar: _profile.avatar,
+        cycleLength: _profile.cycleLength,
+        periodDuration: _profile.periodDuration,
+      );
+    }
   }
 
   Future<void> logout() async {

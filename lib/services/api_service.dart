@@ -146,10 +146,43 @@ class BackendAPIService {
     }
   }
 
-  /// Récupère les tâches
-  Future<List<Map<String, dynamic>>> getTasks() async {
+  /// Mise à jour du profil utilisateur
+  Future<Map<String, dynamic>?> updateUserProfile({
+    required int userId,
+    String? name,
+    int? age,
+    String? avatar,
+    int? cycleLength,
+    int? periodDuration,
+  }) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/tasks'));
+      final response = await http.put(
+        Uri.parse('$baseUrl/user/profile'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          if (name != null) 'name': name,
+          if (age != null) 'age': age,
+          if (avatar != null) 'avatar': avatar,
+          if (cycleLength != null) 'cycle_length': cycleLength,
+          if (periodDuration != null) 'period_duration': periodDuration,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return Map<String, dynamic>.from(jsonDecode(utf8.decode(response.bodyBytes)));
+      }
+    } catch (e) {
+      print("Erreur maj profil backend: $e");
+    }
+    return null;
+  }
+
+  /// Récupère les tâches (filtrées par user_id si fourni)
+  Future<List<Map<String, dynamic>>> getTasks({int? userId}) async {
+    try {
+      final url = userId != null ? '$baseUrl/tasks?user_id=$userId' : '$baseUrl/tasks';
+      final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final dynamic data = jsonDecode(utf8.decode(response.bodyBytes));
         if (data is List) {
@@ -169,11 +202,103 @@ class BackendAPIService {
   }
 
   /// Ajoute une tâche
-  Future<void> addTask(String text, String category) async {
-    await http.post(
-      Uri.parse('$baseUrl/tasks'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'text': text, 'category': category, 'completed': false}),
-    );
+  Future<Map<String, dynamic>?> addTask(String text, String category, {int? userId}) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/tasks'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'text': text,
+          'category': category,
+          'completed': false,
+          if (userId != null) 'user_id': userId,
+        }),
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return Map<String, dynamic>.from(jsonDecode(utf8.decode(response.bodyBytes)));
+      }
+    } catch (e) {
+      print("Erreur ajout tâche: $e");
+    }
+    return null;
+  }
+
+  /// Basculer l'état complété d'une tâche
+  Future<void> toggleTask(int taskId) async {
+    try {
+      await http.put(Uri.parse('$baseUrl/tasks/$taskId/toggle'));
+    } catch (e) {
+      print("Erreur toggle tâche: $e");
+    }
+  }
+
+  /// Supprimer une tâche
+  Future<void> deleteTask(int taskId) async {
+    try {
+      await http.delete(Uri.parse('$baseUrl/tasks/$taskId'));
+    } catch (e) {
+      print("Erreur suppression tâche: $e");
+    }
+  }
+
+  // ==========================================
+  // SUIVI DU CYCLE FÉMININ (CYCLE LOG)
+  // ==========================================
+
+  /// Enregistrer une entrée dans le journal de cycle (Humeur, symptômes, date règles)
+  Future<Map<String, dynamic>?> postCycleLog({
+    required int userId,
+    String? mood,
+    String? symptoms,
+    DateTime? periodStartDate,
+    String? notes,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/cycle/log'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          if (mood != null) 'mood': mood,
+          if (symptoms != null) 'symptoms': symptoms,
+          if (periodStartDate != null) 'period_start_date': periodStartDate.toIso8601String(),
+          if (notes != null) 'notes': notes,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return Map<String, dynamic>.from(jsonDecode(utf8.decode(response.bodyBytes)));
+      }
+    } catch (e) {
+      print("Erreur log cycle backend: $e");
+    }
+    return null;
+  }
+
+  /// Obtenir l'historique du cycle de l'utilisatrice
+  Future<List<Map<String, dynamic>>> getCycleHistory(int userId) async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/cycle/history?user_id=$userId'));
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
+        return data.map((item) => Map<String, dynamic>.from(item)).toList();
+      }
+    } catch (e) {
+      print("Erreur historique cycle backend: $e");
+    }
+    return [];
+  }
+
+  /// Obtenir les prédictions automatiques de cycle
+  Future<Map<String, dynamic>?> getCyclePredictions(int userId) async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/cycle/predictions?user_id=$userId'));
+      if (response.statusCode == 200) {
+        return Map<String, dynamic>.from(jsonDecode(utf8.decode(response.bodyBytes)));
+      }
+    } catch (e) {
+      print("Erreur prédictions cycle backend: $e");
+    }
+    return null;
   }
 }

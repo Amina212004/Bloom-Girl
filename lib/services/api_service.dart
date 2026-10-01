@@ -107,9 +107,10 @@ class BackendAPIService {
   // ==========================================
 
   /// Récupère l'historique des messages stockés en base
-  Future<List<ChatMessage>> getChatHistory() async {
+  Future<List<ChatMessage>> getChatHistory({int? userId}) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/chat/history'));
+      final url = userId != null ? '$baseUrl/chat/history?user_id=$userId' : '$baseUrl/chat/history';
+      final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
         return data.map((json) => ChatMessage(
@@ -120,7 +121,7 @@ class BackendAPIService {
         )).toList();
       }
     } catch (e) {
-      print("Erreur de connexion au backend: $e");
+      debugPrint("Erreur de connexion au backend: $e");
     }
     return [];
   }
@@ -173,7 +174,7 @@ class BackendAPIService {
         return Map<String, dynamic>.from(jsonDecode(utf8.decode(response.bodyBytes)));
       }
     } catch (e) {
-      print("Erreur maj profil backend: $e");
+      debugPrint("Erreur maj profil backend: $e");
     }
     return null;
   }
@@ -196,7 +197,7 @@ class BackendAPIService {
         }
       }
     } catch (e) {
-      print("Erreur tâches: $e");
+      debugPrint("Erreur tâches: $e");
     }
     return <Map<String, dynamic>>[];
   }
@@ -218,7 +219,7 @@ class BackendAPIService {
         return Map<String, dynamic>.from(jsonDecode(utf8.decode(response.bodyBytes)));
       }
     } catch (e) {
-      print("Erreur ajout tâche: $e");
+      debugPrint("Erreur ajout tâche: $e");
     }
     return null;
   }
@@ -228,7 +229,7 @@ class BackendAPIService {
     try {
       await http.put(Uri.parse('$baseUrl/tasks/$taskId/toggle'));
     } catch (e) {
-      print("Erreur toggle tâche: $e");
+      debugPrint("Erreur toggle tâche: $e");
     }
   }
 
@@ -237,7 +238,7 @@ class BackendAPIService {
     try {
       await http.delete(Uri.parse('$baseUrl/tasks/$taskId'));
     } catch (e) {
-      print("Erreur suppression tâche: $e");
+      debugPrint("Erreur suppression tâche: $e");
     }
   }
 
@@ -270,7 +271,7 @@ class BackendAPIService {
         return Map<String, dynamic>.from(jsonDecode(utf8.decode(response.bodyBytes)));
       }
     } catch (e) {
-      print("Erreur log cycle backend: $e");
+      debugPrint("Erreur log cycle backend: $e");
     }
     return null;
   }
@@ -284,7 +285,7 @@ class BackendAPIService {
         return data.map((item) => Map<String, dynamic>.from(item)).toList();
       }
     } catch (e) {
-      print("Erreur historique cycle backend: $e");
+      debugPrint("Erreur historique cycle backend: $e");
     }
     return [];
   }
@@ -297,7 +298,7 @@ class BackendAPIService {
         return Map<String, dynamic>.from(jsonDecode(utf8.decode(response.bodyBytes)));
       }
     } catch (e) {
-      print("Erreur prédictions cycle backend: $e");
+      debugPrint("Erreur prédictions cycle backend: $e");
     }
     return null;
   }

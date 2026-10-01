@@ -4,6 +4,7 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
 import '../models/chat_message.dart';
 import '../services/ai_service.dart';
+import '../services/api_service.dart';
 import '../services/user_service.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/voice_chat_overlay.dart';
@@ -21,6 +22,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final AIService _aiService = AIService();
+  final BackendAPIService _backendApi = BackendAPIService();
   bool _isTyping = false;
   bool _autoVoiceReply = true;
 
@@ -94,7 +96,26 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     });
 
     // Message de bienvenue
-    final name = UserService().profile.name;
+    final profile = UserService().profile;
+    final name = profile.name;
+
+    // Charger l'historique du chat depuis le backend
+    if (profile.id != null) {
+      try {
+        final history = await _backendApi.getChatHistory(userId: profile.id);
+        if (history.isNotEmpty && mounted) {
+          setState(() {
+            _messages.addAll(history);
+          });
+          _scrollToBottom();
+          return; // Ne pas afficher le message de bienvenue si historique existant
+        }
+      } catch (e) {
+        debugPrint('Erreur chargement historique chat: $e');
+      }
+    }
+
+    // Message de bienvenue (seulement si pas d'historique)
     setState(() {
       _messages.add(
         ChatMessage(
@@ -170,6 +191,10 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
 
     try {
       final aiResponseText = await _aiService.sendMessage(_messages);
+
+      // Sauvegarder dans la base de données backend (fire-and-forget)
+      final userId = UserService().profile.id;
+      _backendApi.sendChatMessage(trimmedText, userId: userId).catchError((_) {});
 
       final aiMessage = ChatMessage(
         id: (DateTime.now().millisecondsSinceEpoch + 1).toString(),

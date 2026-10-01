@@ -23,6 +23,9 @@ class _CycleTrackerScreenState extends State<CycleTrackerScreen>
   AnimationController? _glowController;
   late Animation<double> _glowAnimation;
 
+  // Prédictions backend (null = pas encore chargé)
+  Map<String, dynamic>? _backendPredictions;
+
   // Suivi du flux et de l'humeur
   String _selectedFlow = 'Moyen';
   String _selectedMood = 'Calme & Sereine';
@@ -61,6 +64,20 @@ class _CycleTrackerScreenState extends State<CycleTrackerScreen>
   void initState() {
     super.initState();
     _initAnimations();
+    _loadBackendPredictions();
+  }
+
+  Future<void> _loadBackendPredictions() async {
+    final userId = _userService.profile.id;
+    if (userId == null) return;
+    try {
+      final predictions = await BackendAPIService().getCyclePredictions(userId);
+      if (predictions != null && mounted) {
+        setState(() => _backendPredictions = predictions);
+      }
+    } catch (e) {
+      debugPrint('Erreur prédictions backend: $e');
+    }
   }
 
   void _initAnimations() {
@@ -554,18 +571,51 @@ class _CycleTrackerScreenState extends State<CycleTrackerScreen>
     }
 
     final lastPeriod = profile.lastPeriodDate!;
-    final nextPeriod = lastPeriod.add(Duration(days: profile.cycleLength));
 
-    int daysLeft = nextPeriod.difference(DateTime.now()).inDays;
-    if (daysLeft < 0) daysLeft = 0;
+    // ✅ Utilise les prédictions du backend si disponibles, sinon calcul local
+    late DateTime nextPeriod;
+    late int daysLeft;
+    late int currentDayOfCycle;
 
-    final currentDayOfCycle =
-        (DateTime.now().difference(lastPeriod).inDays % profile.cycleLength) + 1;
+    if (_backendPredictions != null) {
+      // Backend predictions (plus précises car basées sur l'historique DB)
+      try {
+        nextPeriod = DateTime.parse(_backendPredictions!['next_period_date'].toString());
+      } catch (_) {
+        nextPeriod = lastPeriod.add(Duration(days: profile.cycleLength));
+      }
+      daysLeft = _backendPredictions!['days_until_next_period'] as int? ??
+          nextPeriod.difference(DateTime.now()).inDays;
+      if (daysLeft < 0) daysLeft = 0;
+      currentDayOfCycle = _backendPredictions!['current_day_of_cycle'] as int? ??
+          (DateTime.now().difference(lastPeriod).inDays % profile.cycleLength) + 1;
+    } else {
+      // Calcul local (fallback si pas encore de réponse backend)
+      nextPeriod = lastPeriod.add(Duration(days: profile.cycleLength));
+      daysLeft = nextPeriod.difference(DateTime.now()).inDays;
+      if (daysLeft < 0) daysLeft = 0;
+      currentDayOfCycle =
+          (DateTime.now().difference(lastPeriod).inDays % profile.cycleLength) + 1;
+    }
 
     String currentPhase;
     Color phaseColor;
 
-    if (currentDayOfCycle <= profile.periodDuration) {
+    // Phase actuelle : préférer la réponse backend, sinon déduire localement
+    final backendPhase = _backendPredictions?['current_phase'] as String?;
+    if (backendPhase != null && backendPhase.isNotEmpty) {
+      currentPhase = backendPhase;
+      // Couleur associée à la phase backend
+      if (backendPhase.contains('Menstruelle') || backendPhase.contains('menstrual')) {
+        phaseColor = const Color(0xFFE56B85);
+      } else if (backendPhase.contains('Folliculaire') || backendPhase.contains('follicular')) {
+        phaseColor = const Color(0xFFD67397);
+      } else if (backendPhase.contains('Ovulat')) {
+        phaseColor = _goldGlow;
+      } else {
+        phaseColor = const Color(0xFF9E658E);
+      }
+    } else if (currentDayOfCycle <= profile.periodDuration) {
       currentPhase = "Phase Menstruelle";
       phaseColor = const Color(0xFFE56B85);
     } else if (currentDayOfCycle <= 11) {

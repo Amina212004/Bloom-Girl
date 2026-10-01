@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../services/user_service.dart';
 
 enum AuthViewMode { signIn, signUp }
@@ -93,6 +94,31 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _handleGoogleSignIn() async {
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email']);
+      final account = await googleSignIn.signIn();
+      if (account != null) {
+        setState(() => _isLoading = true);
+        try {
+          await _userService.loginWithGoogle(
+            googleEmail: account.email,
+            googleName: account.displayName,
+          );
+          _showSnackbar("Connectée avec succès via Google ! 🌸");
+          widget.onAuthenticated();
+          return;
+        } catch (e) {
+          final errMsg = e.toString().replaceAll("Exception:", "").trim();
+          _showSnackbar(errMsg.isNotEmpty ? errMsg : "Cette adresse n'est pas encore inscrite. Veuillez créer un compte d'abord.", isError: true);
+          return;
+        } finally {
+          if (mounted) setState(() => _isLoading = false);
+        }
+      }
+    } catch (e) {
+      print("Google Sign-In natif indisponible/annulé, ouverture du formulaire modal : $e");
+    }
+
     final googleEmailController = TextEditingController();
     final googleNameController = TextEditingController();
 

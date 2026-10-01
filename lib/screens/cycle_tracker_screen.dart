@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/user_service.dart';
 import '../services/api_service.dart';
 import '../widgets/pink_panda_mascot.dart';
+import '../widgets/cycle_analytics_chart.dart';
 
 class CycleTrackerScreen extends StatefulWidget {
   const CycleTrackerScreen({Key? key}) : super(key: key);
@@ -776,6 +777,14 @@ class _CycleTrackerScreenState extends State<CycleTrackerScreen>
 
                 // 💖 JOURNAL DES SYMPTÔMES & BIEN-ÊTRE
                 _buildSymptomsCard(profile.name),
+
+                const SizedBox(height: 20),
+
+                // 📊 GRAPHIQUE & STATISTIQUES D'ÉNERGIE HORMONALE
+                CycleAnalyticsChart(
+                  cycleLength: profile.cycleLength,
+                  periodDuration: profile.periodDuration,
+                ),
               ],
             ),
           ),
